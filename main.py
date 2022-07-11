@@ -1,4 +1,3 @@
-from multiprocessing.sharedctypes import Value
 import numpy as np
 
 def gradient_descent(gradient,x,y, start, learn_rate, n_iter=50,tolerance=1e-6,
