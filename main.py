@@ -47,9 +47,19 @@ dtype='float64'):
 
     return vector if vector.shape else vector.item()
 
-def ssr_gradient(x,y,b):
+def ssr_gradient(x,y,b,c):
     res = b[0] + b[1] * x - y
-    return res.mean(), (res * x).mean()
+    return res.mean(), (res * x).mean() 
+    
+def mlr_gradient(x,y,b,c):
+    pred =  np.sum(x*b,axis=1)
+    y = np.transpose(y.flatten())
+    
+    return(sum((pred-y)*x[:,c])/len(x))
+    
+    
+   
+   
 
 def sgd(
     gradient,x,y,n_vars = None,start=None,decay_rate = 0.0,
@@ -65,16 +75,14 @@ def sgd(
 
     # converting the x and y to numpy arrays
     x, y  = np.array(x, dtype=dtype_), np.array(y, dtype=dtype_)
+    
     n_obs = x.shape[0]
 
     if n_obs != y.shape[0]:
         raise ValueError("'x' and 'y' lengths do not match")
 
     xy = np.c_[x.reshape(n_obs,-1), y.reshape(n_obs,1)]
-
-    print(y.reshape(n_obs,-1))
-    print(xy)
-
+    
     #initialize the RNG
     seed = None if random_state is None else int(random_state)
     rng = np.random.default_rng(seed=seed)
@@ -113,7 +121,7 @@ def sgd(
         raise ValueError("'decay_rate' must be between zero and one")
 
     # Setting the difference to zero for the first iteration
-    diff = 0
+    diff = np.zeros(n_vars)
     
     #Performing the gradient descent loop
     for _ in range(n_iter):
@@ -123,44 +131,30 @@ def sgd(
             stop = start + batch_size
             x_batch, y_batch = xy[start:stop, :-1], xy[start:stop, -1:]
 
+            
             #recalculate the difference
-            grad = np.array(gradient(x_batch,y_batch,vector),dtype_)
-            diff = decay_rate * diff - learn_rate * grad
+            for c in range(0,n_vars):
+                grad = np.array(gradient(x_batch,y_batch,vector,c),dtype_)
+                diff[c] = decay_rate * diff[c] - learn_rate * grad
 
             if np.all(np.abs(diff) <= tolerance):
                 break
 
-            vector  += diff
+            vector += diff
 
     return vector if vector.shape  else vector.item()
 
 
 if __name__ == "__main__":  
 
-
-    train = np.array([5,10,15,20,25,30])
-    test= np.array([1,2,3,4,5,6])
-
-    ssr = gradient_descent(
-        gradient = ssr_gradient,
-        x = train,
-        y = test,
-        start = [0.5,0.5],
-        learn_rate = 0.0008,
-        n_iter = 100_000
-    )
-
-    print(ssr)
-
-    print(ssr[0] + ssr[1]*train[5])
-
-    x = np.array([5, 15, 25, 35, 45, 55])
+    x = np.column_stack(([1,1,1,1,1,1],[5, 15, 25, 35, 45, 55],[10,14,17,23,54,32]))
     y = np.array([5, 20, 14, 32, 22, 38])
-
+   
     a =sgd(
-     ssr_gradient, x, y, n_vars=2, learn_rate=0.0001,
+     mlr_gradient, x, y, n_vars=3, learn_rate=0.0001,
      decay_rate=0.8, batch_size=3, n_iter=100_000, random_state=0
      )
-    print(a)
 
+
+    print(a)
 
